@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: my-photo-deleter-acf
- * Description: A plugin to delete WooCommerce products with ACF fields from a CSV.
+ * Plugin Name: BRMSRA-All-Products-Deleter
+ * Description: CAUTION This deletes all products (Documents and Photos) from the shop
  * Version: 1.0
  * Author: Paul Frost
  */
@@ -15,8 +15,8 @@ if (!defined('ABSPATH')) {
 add_action('admin_menu', function () {
     add_submenu_page(
         'tools.php', // Parent menu
-        'Delete Photo Products', // Page title
-        'Delete Photo Products', // Menu title
+        'Delete All Products', // Page title
+        'Delete All Products', // Menu title
         'manage_options', // Capability
         'myplugin-delete-data', // Menu slug
         'myplugin_delete_page' // Callback function
@@ -94,5 +94,3 @@ function myplugin_run_delete() {
         echo "<div class='notice notice-warning'><p>No products found to delete.</p></div>";
     }
 }
-
-

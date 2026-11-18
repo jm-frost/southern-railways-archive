@@ -23,17 +23,34 @@ add_filter('woocommerce_catalog_orderby', 'custom_remove_sorting_options');
 function custom_add_sorting_options($options) {
     $options['date'] = __('Sort by recently added', 'astra');
     $options['title_asc'] = __('Sort by title (A–Z)', 'astra');
+    $options['sort_date_asc'] = __('Sort by date:Oldest First', 'astra');
+    $options['sort_date_desc'] = __('Sort by date:Oldest Last', 'astra');
     return $options;
 }
 add_filter('woocommerce_catalog_orderby', 'custom_add_sorting_options');
 
-// Add support for our custom "Sort by title"
 function custom_sorting_query($query) {
     if (!is_admin() && $query->is_main_query() && (is_shop() || is_product_category() || is_product_tag())) {
-        if (isset($_GET['orderby']) && $_GET['orderby'] === 'title_asc') {
+        $orderby = isset($_GET['orderby']) ? $_GET['orderby'] : '';
+
+        if ($orderby === 'title_asc') {
             $query->set('orderby', 'title');
             $query->set('order', 'ASC');
+        } 
+        
+        // Handling your ACF sort_date field
+        elseif ($orderby === 'sort_date_asc') {
+            $query->set('meta_key', 'sort_date'); // The name of your ACF field
+            $query->set('orderby', 'meta_value'); // Use 'meta_value_num' if the date is a timestamp
+            $query->set('order', 'ASC');          // Use 'DESC' if you want newest dates first
         }
+
+        elseif ($orderby === 'sort_date_desc') {
+            $query->set('meta_key', 'sort_date'); // The name of your ACF field
+            $query->set('orderby', 'meta_value'); // Use 'meta_value_num' if the date is a timestamp
+            $query->set('order', 'DESC');          // Use 'DESC' if you want newest dates first
+        }
+
     }
 }
 add_action('pre_get_posts', 'custom_sorting_query');
@@ -92,7 +109,7 @@ class Document_Filter_Widget extends WP_Widget {
           	</p>
             <p style="display: flex; gap: 10px;">
                 <button type="button" onclick="window.location.href='<?php echo esc_url( get_term_link( 'documents', 'product_cat' ) ); ?>
-';">Reset All</button>
+                ';">Reset All</button>
             </p>
 
         </form>
@@ -182,6 +199,23 @@ function acf_multi_field_filter_query( $query ) {
                 ]
             ];
 
+        if ( isset($_GET['product_tag']) && $_GET['product_tag'] !== '' ) {
+            $tax_query = [
+                [
+                    'taxonomy' => 'product_tag',
+                    'field'    => 'slug',
+                    'terms'    => sanitize_text_field($_GET['product_tag']),
+                ]
+            ];
+
+            $existing_tax_query = $query->get('tax_query');
+            if ($existing_tax_query) {
+                $tax_query = array_merge($existing_tax_query, $tax_query);
+            }
+
+            $query->set('tax_query', $tax_query);
+        }
+
             $existing_tax_query = $query->get( 'tax_query' );
             if ( $existing_tax_query ) {
                 $tax_query = array_merge( $existing_tax_query, $tax_query );
@@ -258,6 +292,32 @@ class ACF_Filter_Widget extends WP_Widget {
                     </select>
                 </p>
             <?php endif; ?>
+
+            <?php
+            // ✅ Product Tags Dropdown
+            $selected_tag = isset($_GET['product_tag']) ? sanitize_text_field($_GET['product_tag']) : '';
+
+            $product_tags = get_terms([
+                'taxonomy'   => 'product_tag',
+                'hide_empty' => true,
+            ]);
+
+            if ( ! is_wp_error($product_tags) && ! empty($product_tags) ) :
+            ?>
+                <p>
+                    <label for="product_tag">Tag:</label><br>
+                    <select name="product_tag" id="product_tag" style="width:100%;">
+                        <option value="">-- Any --</option>
+                        <?php foreach ( $product_tags as $tag ) : ?>
+                            <option value="<?php echo esc_attr($tag->slug); ?>" <?php selected($selected_tag, $tag->slug); ?>>
+                                <?php echo esc_html($tag->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </p>
+            <?php
+            endif;
+            ?>
 
             <p style="display: flex; gap: 10px;">
               <button type="submit">Search</button>
